@@ -12,6 +12,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include <mpi.h>
+#include <omp.h>
 #include <string.h>
 #include <float.h>
 
@@ -22,6 +23,8 @@
 // Jacobi constants
 #define MAX_ITERATIONS 1000
 #define TOL 1.0e-4
+// OMP constants
+#define N_THREADS 4
 
 struct timeval tv;
 double get_clock() {
@@ -54,6 +57,7 @@ void init_matrix(double **a, double *rfrbuff, double *rfcbuff, double *rlrbuff, 
 
 	// Initialize matrix
 	// First time all values are INITIAL_GRID
+	#pragma omp parallel for private(j)
 	for(i=0; i<subprob_size; i++) {
 		rfrbuff[i] = INITIAL_GRID;
 		rfcbuff[i] = INITIAL_GRID;
@@ -68,12 +72,14 @@ void init_matrix(double **a, double *rfrbuff, double *rfcbuff, double *rlrbuff, 
 	// Outline column values
 	// I'm in the first column
 	if (column_num == 0){
+		#pragma omp parallel for
 		for(i=0; i<subprob_size; i++){
 			rfcbuff[i] = BC_HOT;
 		}
 	}
 	// I'm in the last column
 	else if(column_num == ((int) sqrt(n_subprobs))-1){
+		#pragma omp parallel for
 		for(i=0; i<subprob_size; i++){
 			rlcbuff[i] = BC_HOT;
 		}
@@ -82,12 +88,14 @@ void init_matrix(double **a, double *rfrbuff, double *rfcbuff, double *rlrbuff, 
 	// Outline row values
 	// I'm in the first row
 	if (row_num == 0){
+		#pragma omp parallel for
 		for(j=0; j<subprob_size; j++){
 			rfrbuff[j] = BC_HOT;
 		}
 	}
 	// I'm in the last row
 	else if(row_num == ((int) sqrt(n_subprobs))-1){
+		#pragma omp parallel for
 		for(j=0; j<subprob_size; j++){
 			rlrbuff[j] = BC_COLD;
 		}
@@ -156,6 +164,8 @@ int main(int argc, char* argv[]) {
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
+	omp_set_num_threads(N_THREADS);
+
 	// My subproblem params
 	n_subprobs = atoi(argv[1]);
 	n_dim = atoi(argv[2]);
@@ -198,6 +208,7 @@ int main(int argc, char* argv[]) {
 		// I'm not in the last column
 		if (column_num != ((int) sqrt(n_subprobs))-1){
 			// send the last column of my subproblem matrix
+			#pragma omp parallel for
 			for(i=0; i<subprob_size; i++) slcbuff[i] = a[i][subprob_size-1];
 			MPI_Isend(slcbuff, subprob_size, MPI_DOUBLE, my_rank+1, iteration, MPI_COMM_WORLD, slcreq);
 
@@ -207,6 +218,7 @@ int main(int argc, char* argv[]) {
 		// I'm not in the first column
 		if (column_num != 0){
 			// send the first column of my subproblem matrix
+			#pragma omp parallel for
 			for(i=0; i<subprob_size; i++) sfcbuff[i] = a[i][0];
 			MPI_Isend(sfcbuff, subprob_size, MPI_DOUBLE, my_rank-1, iteration, MPI_COMM_WORLD, sfcreq);
 
@@ -239,6 +251,7 @@ int main(int argc, char* argv[]) {
 		// Inner rows i=[1...subprob_size-2]
 		for(i=1;i<subprob_size-1;i++) {
 			// j=[1...subprob_size-2]
+			#pragma omp parallel for reduction(max:maxdiff)
 			for(j=1;j<subprob_size-1;j++) {
 				b[i][j] = 0.2*(a[i][j]+a[i-1][j]+a[i+1][j]+a[i][j-1]+a[i][j+1]);
 				if (fabs(b[i][j]-a[i][j]) > maxdiff) maxdiff = fabs(b[i][j]-a[i][j]);
@@ -278,6 +291,7 @@ int main(int argc, char* argv[]) {
 		b[i][j] = 0.2*(a[i][j]+rfrbuff[j]+a[i+1][j]+rfcbuff[i]+a[i][j+1]);
 		if (fabs(b[i][j]-a[i][j]) > maxdiff) maxdiff = fabs(b[i][j]-a[i][j]);
 		// j=[1...subprob_size-2]
+		#pragma omp parallel for reduction(max:maxdiff)
 		for(j=1;j<subprob_size-1;j++){
 			b[i][j] = 0.2*(a[i][j]+rfrbuff[j]+a[i+1][j]+a[i][j-1]+a[i][j+1]);
 			if (fabs(b[i][j]-a[i][j]) > maxdiff) maxdiff = fabs(b[i][j]-a[i][j]);
@@ -288,6 +302,7 @@ int main(int argc, char* argv[]) {
 		if (fabs(b[i][j]-a[i][j]) > maxdiff) maxdiff = fabs(b[i][j]-a[i][j]);
 
 		// Inner rows i=[1...subprob_size-2]
+		#pragma omp parallel for reduction(max:maxdiff)
 		for(i=1;i<subprob_size-1;i++) {
 			// j=0
 			j=0;
@@ -307,6 +322,7 @@ int main(int argc, char* argv[]) {
 		b[i][j] = 0.2*(a[i][j]+a[i-1][j]+rlrbuff[j]+rfcbuff[i]+a[i][j+1]);
 		if (fabs(b[i][j]-a[i][j]) > maxdiff) maxdiff = fabs(b[i][j]-a[i][j]);
 		// j=[1...subprob_size-2]
+		#pragma omp parallel for reduction(max:maxdiff)
 		for(j=1;j<subprob_size-1;j++){
 			b[i][j] = 0.2*(a[i][j]+a[i-1][j]+rlrbuff[j]+a[i][j-1]+a[i][j+1]);
 			if (fabs(b[i][j]-a[i][j]) > maxdiff) maxdiff = fabs(b[i][j]-a[i][j]);
