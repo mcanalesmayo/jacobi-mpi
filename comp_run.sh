@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 1st param: MPI -n and first C programa parameter
+# 1st param: MPI -n and first C program parameter
 # 2nd param: MPI --hostfile
 # 3rd param: {file}.c
 # Remaining params: C remaining program parameters
