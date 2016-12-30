@@ -120,8 +120,6 @@ void print_grid(double **a, int nstart, int nend) {
 }
 
 void free_matrix(double **a) {
-	int i;
-
 	// ** reverse order would raise segm. fault
 	// ** as pointers to rows would be freed before rows themselves are freed
 	free(a[0]);
