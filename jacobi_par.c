@@ -195,8 +195,8 @@ int main(int argc, char* argv[]) {
 		maxdiff = 0.0;
 
 		// Send my outer columns values
-		// I'm in the first column
-		if (column_num == 0){
+		// I'm not in the last column
+		if (column_num != ((int) sqrt(n_subprobs))-1){
 			// send the last column of my subproblem matrix
 			for(i=0; i<subprob_size; i++) slcbuff[i] = a[i][subprob_size-1];
 			MPI_Isend(slcbuff, subprob_size, MPI_DOUBLE, my_rank+1, iteration, MPI_COMM_WORLD, slcreq);
@@ -204,33 +204,19 @@ int main(int argc, char* argv[]) {
 			// post receive last column + 1
 			MPI_Irecv(rlcbuff, subprob_size, MPI_DOUBLE, my_rank+1, iteration, MPI_COMM_WORLD, rlcreq);
 		}
-		// I'm in the last column
-		else if(column_num == ((int) sqrt(n_subprobs))-1){
+		// I'm not in the first column
+		if (column_num != 0){
 			// send the first column of my subproblem matrix
 			for(i=0; i<subprob_size; i++) sfcbuff[i] = a[i][0];
 			MPI_Isend(sfcbuff, subprob_size, MPI_DOUBLE, my_rank-1, iteration, MPI_COMM_WORLD, sfcreq);
 
-			// post receive first column - 1
-			MPI_Irecv(rfcbuff, subprob_size, MPI_DOUBLE, my_rank-1, iteration, MPI_COMM_WORLD, rfcreq);
-		}
-		// I'm in an inner column
-		else{
-			// send the last column of my subproblem matrix
-			for(i=0; i<subprob_size; i++) slcbuff[i] = a[i][subprob_size-1];
-			MPI_Isend(slcbuff, subprob_size, MPI_DOUBLE, my_rank+1, iteration, MPI_COMM_WORLD, slcreq);
-			// send the first column of my subproblem matrix
-			for(i=0; i<subprob_size; i++) sfcbuff[i] = a[i][0];
-			MPI_Isend(sfcbuff, subprob_size, MPI_DOUBLE, my_rank-1, iteration, MPI_COMM_WORLD, sfcreq);
-
-			// post receive last column + 1
-			MPI_Irecv(rlcbuff, subprob_size, MPI_DOUBLE, my_rank+1, iteration, MPI_COMM_WORLD, rlcreq);
 			// post receive first column - 1
 			MPI_Irecv(rfcbuff, subprob_size, MPI_DOUBLE, my_rank-1, iteration, MPI_COMM_WORLD, rfcreq);
 		}
 
 		// Send my outer rows values
-		// I'm in the first row
-		if (row_num == 0){
+		// I'm not in the last row
+		if (row_num != ((int) sqrt(n_subprobs))-1){
 			// send the last row of my subproblem matrix
 			memcpy(slrbuff, a[subprob_size-1], subprob_size*sizeof(double));
 			MPI_Isend(slrbuff, subprob_size, MPI_DOUBLE, (int) (my_rank+sqrt(n_subprobs)), iteration, MPI_COMM_WORLD, slrreq);
@@ -238,26 +224,12 @@ int main(int argc, char* argv[]) {
 			// post receive last row + 1
 			MPI_Irecv(rlrbuff, subprob_size, MPI_DOUBLE, (int) (my_rank+sqrt(n_subprobs)), iteration, MPI_COMM_WORLD, rlrreq);
 		}
-		// I'm in the last row
-		else if(row_num == ((int) sqrt(n_subprobs))-1){
+		// I'm not in the first row
+		if (row_num != 0){
 			// send the first row of my subproblem matrix
 			memcpy(sfrbuff, a[0], subprob_size*sizeof(double));
 			MPI_Isend(sfrbuff, subprob_size, MPI_DOUBLE, (int) (my_rank-sqrt(n_subprobs)), iteration, MPI_COMM_WORLD, sfrreq);
 
-			// post receive first row - 1
-			MPI_Irecv(rfrbuff, subprob_size, MPI_DOUBLE, (int) (my_rank-sqrt(n_subprobs)), iteration, MPI_COMM_WORLD, rfrreq);
-		}
-		// I'm in an inner row
-		else{
-			// send the last row of my subproblem matrix
-			memcpy(slrbuff, a[subprob_size-1], subprob_size*sizeof(double));
-			MPI_Isend(slrbuff, subprob_size, MPI_DOUBLE, (int) (my_rank+sqrt(n_subprobs)), iteration, MPI_COMM_WORLD, slrreq);
-			// send the first row of my subproblem matrix
-			memcpy(sfrbuff, a[0], subprob_size*sizeof(double));
-			MPI_Isend(sfrbuff, subprob_size, MPI_DOUBLE, (int) (my_rank-sqrt(n_subprobs)), iteration, MPI_COMM_WORLD, sfrreq);
-
-			// post receive last row + 1
-			MPI_Irecv(rlrbuff, subprob_size, MPI_DOUBLE, (int) (my_rank+sqrt(n_subprobs)), iteration, MPI_COMM_WORLD, rlrreq);
 			// post receive first row - 1
 			MPI_Irecv(rfrbuff, subprob_size, MPI_DOUBLE, (int) (my_rank-sqrt(n_subprobs)), iteration, MPI_COMM_WORLD, rfrreq);
 		}
@@ -274,43 +246,30 @@ int main(int argc, char* argv[]) {
 		}
 
 		// Recv outline columns values
-		// I'm in the first column
-		if (column_num == 0){
+		// I'm not in the last column
+		if (column_num != ((int) sqrt(n_subprobs))-1){
 			// waiting to receive last column
 			wait_req(rlcreq);
 		}
-		// I'm in the last column
-		else if(column_num == ((int) sqrt(n_subprobs))-1){
-			// waiting to receive first column
-			wait_req(rfcreq);
-		}
-		// I'm in an inner column
-		else{
-			// waiting to receive last column
-			wait_req(rlcreq);
+		// I'm not in the first column
+		if (column_num != 0){
 			// waiting to receive first column
 			wait_req(rfcreq);
 		}
 
 		// Recv outline rows values
-		// I'm in the first row
-		if (row_num == 0){
+		// I'm not in the last row row
+		if (row_num != ((int) sqrt(n_subprobs))-1){
 			// waiting to receive last row
 			wait_req(rlrreq);
 		}
-		// I'm in the last row
-		else if (row_num == ((int) sqrt(n_subprobs))-1){
-			// waiting to receive first row
-			wait_req(rfrreq);
-		}
-		// I'm in an inner row
-		else{
-			// waiting to receive last row
-			wait_req(rlrreq);
+		// I'm not in the first row
+		if (row_num != 0){
 			// waiting to receive first row
 			wait_req(rfrreq);
 		}
 
+		// Compute new outer grid values
 		// EL	= 0.2*(   EL  +   UP     +  DOWN +   LEFT   + RIGHT );
 		// First row i=0
 		i=0;
@@ -369,17 +328,26 @@ int main(int argc, char* argv[]) {
 
 	// Gatherv doesn't fit here, as displs param isn't taken as bytes, instead it's multiplied by the size of the recvtype, which is double_strided_vect
 	// Alternative is Send subprob_size*subprob_size contiguous doubles and Recv strided vector
-	// Send my subproblem results
-	MPI_Send(a[0], subprob_size*subprob_size, MPI_DOUBLE, root_rank, generic_tag, MPI_COMM_WORLD);
+
 	// Root process groups results
 	if (my_rank == root_rank){
-		for(i=0;i<n_subprobs;i++){
+		// reuse sfrreq as req handler
+		// send my values to myself -> IMPORTANT: non blocking mode
+		MPI_Isend(a[0], subprob_size*subprob_size, MPI_DOUBLE, root_rank, generic_tag, MPI_COMM_WORLD, sfrreq);
+		MPI_Recv(res[0], 1, double_strided_vect, root_rank, generic_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+		for(i=1;i<n_subprobs;i++){
 			// res_offset:	- add (row number * row size)
 			// 				- add (in-row position * subproblem size)
 			res_offset = ((int) (i/(int) sqrt(n_subprobs))) *subprob_size*subprob_size*(int) sqrt(n_subprobs);
 			res_offset += i%((int) sqrt(n_subprobs)) * subprob_size;
 			MPI_Recv(res[0] + res_offset, 1, double_strided_vect, i, generic_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		}
+	}
+	// Remaining processes
+	else{
+		// Send my subproblem results
+		MPI_Send(a[0], subprob_size*subprob_size, MPI_DOUBLE, root_rank, generic_tag, MPI_COMM_WORLD);
 	}
 
 	tend = MPI_Wtime();
