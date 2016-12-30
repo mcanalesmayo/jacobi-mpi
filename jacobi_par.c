@@ -160,11 +160,11 @@ int main(int argc, char* argv[]) {
 	n_subprobs = atoi(argv[1]);
 	n_dim = atoi(argv[2]);
 	
+	subprob_size = (int) sqrt((n_dim*n_dim)/n_subprobs);
+
 	// Where am I
 	column_num = my_rank%((int) sqrt(n_subprobs));
 	row_num = (int) (my_rank/(int) sqrt(n_subprobs));
-
-	subprob_size = (int) sqrt((n_dim*n_dim)/n_subprobs);
 
 	// Could do a single big malloc to avoid overhead of multiple syscalls
 	sfrbuff = malloc(subprob_size*sizeof(double)); sfcbuff = malloc(subprob_size*sizeof(double)); slrbuff = malloc(subprob_size*sizeof(double)); slcbuff = malloc(subprob_size*sizeof(double));
@@ -176,7 +176,7 @@ int main(int argc, char* argv[]) {
 	// Alloc matrices
 	a = create_matrix(subprob_size);
 	b = create_matrix(subprob_size);
-	if (my_rank == root_rank) res = create_matrix(subprob_size*subprob_size);
+	if (my_rank == root_rank) res = create_matrix(n_dim);
 
 	// Create strided vector datatype, used when gathering all subproblems
 	MPI_Type_vector(subprob_size, subprob_size, n_dim, MPI_DOUBLE, &double_strided_vect);
@@ -388,12 +388,14 @@ int main(int argc, char* argv[]) {
 	if (my_rank == root_rank){
 		// Output final grid
 		printf("Final grid:\n");
-		print_grid(res, 0, subprob_size*subprob_size);
+		print_grid(res, 0, n_dim);
 
 		// Results
 		printf("Results:\n");
 		printf("Iterations=%d\n", iteration);
 		printf("Tolerance=%12.10lf\n", maxdiff);
+		printf("Problem dimmensions=%dx%d\n", n_dim, n_dim);
+		printf("Number of subproblems=%d\n", n_subprobs);
 		printf("Running time=%12.10lf\n", ttotal);
 
 		// Free allocated mem
