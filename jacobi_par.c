@@ -23,8 +23,6 @@
 // Jacobi constants
 #define MAX_ITERATIONS 1000
 #define TOL 1.0e-4
-// OMP constants
-#define N_THREADS 4
 
 struct timeval tv;
 double get_clock() {
@@ -158,17 +156,17 @@ int main(int argc, char* argv[]) {
 	MPI_Request *sfrreq, *sfcreq, *slrreq, *slcreq;
 	MPI_Request *rfrreq, *rfcreq, *rlrreq, *rlcreq;
 
-	if (argc != 3) return -1;
+	if (argc != 4) return -1;
 
 	// Init MPI lib
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-	omp_set_num_threads(N_THREADS);
+	omp_set_num_threads(atoi(argv[1]));
 
 	// My subproblem params
-	n_subprobs = atoi(argv[1]);
-	n_dim = atoi(argv[2]);
+	n_subprobs = atoi(argv[2]);
+	n_dim = atoi(argv[3]);
 	
 	subprob_size = (int) sqrt((n_dim*n_dim)/n_subprobs);
 

@@ -2,7 +2,8 @@
 
 ## Description
 
-OpenMPI (v1.5) implementation of a simulation of thermal transmission in a 2D space
+OpenMPI (v1.5) implementation of a simulation of thermal transmission in a 2D space.
+OpenMP is also used to provide multithreading.
 
 ## Author
 
