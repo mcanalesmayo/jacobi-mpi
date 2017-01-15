@@ -21,7 +21,7 @@
 #define BC_COLD 0.0
 #define INITIAL_GRID 0.5
 // Jacobi constants
-#define MAX_ITERATIONS 1000
+#define MAX_ITERATIONS 10000
 #define TOL 1.0e-4
 
 struct timeval tv;
@@ -304,7 +304,10 @@ int main(int argc, char* argv[]) {
 			j=0;
 			b[i][j] = 0.2*(a[i][j]+a[i-1][j]+a[i+1][j]+rfcbuff[i]+a[i][j+1]);
 			if (fabs(b[i][j]-a[i][j]) > maxdiff) maxdiff = fabs(b[i][j]-a[i][j]);
-
+		}
+		
+		#pragma omp parallel for reduction(max:maxdiff)
+		for(i=1;i<subprob_size-1;i++){
 			// j=subprob_size-1
 			j=subprob_size-1;
 			b[i][j] = 0.2*(a[i][j]+a[i-1][j]+a[i+1][j]+a[i][j-1]+rlcbuff[i]);
