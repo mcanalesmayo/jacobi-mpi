@@ -43,6 +43,7 @@ double **create_matrix(int subprob_size) {
 	// allocating the matrix in a loop, row by row, may not work as reserved memory is not ensured to be contiguous
 	rows = (double*) malloc(sizeof(double)*subprob_size*subprob_size);
 
+	#pragma omp parallel for
 	for (i=0;i<subprob_size;i++) {
 		a[i] = &rows[i*subprob_size];
 	}
@@ -55,12 +56,8 @@ void init_matrix(double **a, double *rfrbuff, double *rfcbuff, double *rlrbuff, 
 
 	// Initialize matrix
 	// First time all values are INITIAL_GRID
-	#pragma omp parallel for private(j)
+	#pragma omp parallel for collapse(2)
 	for(i=0; i<subprob_size; i++) {
-		rfrbuff[i] = INITIAL_GRID;
-		rfcbuff[i] = INITIAL_GRID;
-		rlrbuff[i] = INITIAL_GRID;
-		rlcbuff[i] = INITIAL_GRID;
 		for(j=0; j<subprob_size; j++)
 			a[i][j] = INITIAL_GRID;
 	}
@@ -70,32 +67,49 @@ void init_matrix(double **a, double *rfrbuff, double *rfcbuff, double *rlrbuff, 
 	// Outline column values
 	// I'm in the first column
 	if (column_num == 0){
-		#pragma omp parallel for
-		for(i=0; i<subprob_size; i++){
-			rfcbuff[i] = BC_HOT;
+		// I'm in the first row column
+		if (row_num == 0){
+			#pragma omp parallel for
+			for(i=0; i<subprob_size; i++){
+				rlcbuff[i] = INITIAL_GRID;
+				rfcbuff[i] = BC_HOT;
+				rlrbuff[i] = INITIAL_GRID;
+				rfrbuff[i] = BC_HOT;
+			}
 		}
+		// I'm in the last row
+		else if(row_num == ((int) sqrt(n_subprobs))-1){
+			#pragma omp parallel for
+			for(i=0; i<subprob_size; i++){
+				rlcbuff[i] = INITIAL_GRID;
+				rfcbuff[i] = BC_HOT;
+				rlrbuff[i] = BC_COLD;
+				rfrbuff[i] = INITIAL_GRID;
+			}
+		}
+		
 	}
 	// I'm in the last column
 	else if(column_num == ((int) sqrt(n_subprobs))-1){
-		#pragma omp parallel for
-		for(i=0; i<subprob_size; i++){
-			rlcbuff[i] = BC_HOT;
+		// I'm in the first row
+		if (row_num == 0){
+			#pragma omp parallel for
+			for(i=0; i<subprob_size; i++){
+				rlcbuff[i] = BC_HOT;
+				rfcbuff[i] = INITIAL_GRID;
+				rlrbuff[i] = INITIAL_GRID;
+				rfrbuff[i] = BC_HOT;
+			}
 		}
-	}
-
-	// Outline row values
-	// I'm in the first row
-	if (row_num == 0){
-		#pragma omp parallel for
-		for(j=0; j<subprob_size; j++){
-			rfrbuff[j] = BC_HOT;
-		}
-	}
-	// I'm in the last row
-	else if(row_num == ((int) sqrt(n_subprobs))-1){
-		#pragma omp parallel for
-		for(j=0; j<subprob_size; j++){
-			rlrbuff[j] = BC_COLD;
+		// I'm in the last row
+		else if(row_num == ((int) sqrt(n_subprobs))-1){
+			#pragma omp parallel for
+			for(i=0; i<subprob_size; i++){
+				rlcbuff[i] = BC_HOT;
+				rfcbuff[i] = INITIAL_GRID;
+				rlrbuff[i] = BC_COLD;
+				rfrbuff[i] = INITIAL_GRID;
+			}
 		}
 	}
 }
@@ -193,6 +207,7 @@ int main(int argc, char* argv[]) {
 	printf("[%d] Running simulation with tolerance=%lf and max iterations=%d\n",
 		my_rank, TOL, MAX_ITERATIONS);
 	tstart = MPI_Wtime();
+	tend = MPI_Wtime();
 
 	init_matrix(a, rfrbuff, rfcbuff, rlrbuff, rlcbuff, n_subprobs, subprob_size, column_num, row_num);
 
@@ -242,17 +257,23 @@ int main(int argc, char* argv[]) {
 			MPI_Irecv(rfrbuff, subprob_size, MPI_DOUBLE, (int) (my_rank-sqrt(n_subprobs)), iteration, MPI_COMM_WORLD, rfrreq);
 		}
 
+		//printf("[%d] Sending outer values=%12.10lf\n", my_rank, MPI_Wtime() - tend);
+		//tend = MPI_Wtime();
+
 		// Compute new inner grid values
 		// EL = 0.2*(   EL  +   UP     +  DOWN +   LEFT   + RIGHT );
 		// Inner rows i=[1...subprob_size-2]
+		#pragma omp parallel for reduction(max:maxdiff) collapse(2)
 		for(i=1;i<subprob_size-1;i++) {
 			// j=[1...subprob_size-2]
-			#pragma omp parallel for reduction(max:maxdiff)
 			for(j=1;j<subprob_size-1;j++) {
 				b[i][j] = 0.2*(a[i][j]+a[i-1][j]+a[i+1][j]+a[i][j-1]+a[i][j+1]);
 				if (fabs(b[i][j]-a[i][j]) > maxdiff) maxdiff = fabs(b[i][j]-a[i][j]);
 			}
 		}
+
+		//printf("[%d] Computing inner values=%12.10lf\n", my_rank, MPI_Wtime() - tend);
+		//tend = MPI_Wtime();
 
 		// Recv outline columns values
 		// I'm not in the last column
@@ -277,6 +298,9 @@ int main(int argc, char* argv[]) {
 			// waiting to receive first row
 			wait_req(rfrreq);
 		}
+
+		//printf("[%d] Waiting outer nodes=%12.10lf\n", my_rank, MPI_Wtime() - tend);
+		//tend = MPI_Wtime();
 
 		// Compute new outer grid values
 		// EL	= 0.2*(   EL  +   UP     +  DOWN +   LEFT   + RIGHT );
@@ -331,12 +355,18 @@ int main(int argc, char* argv[]) {
 		b[i][j] = 0.2*(a[i][j]+a[i-1][j]+rlrbuff[j]+a[i][j-1]+rlcbuff[i]);
 		if (fabs(b[i][j]-a[i][j]) > maxdiff) maxdiff = fabs(b[i][j]-a[i][j]);
 
+		//printf("[%d] Compute outer values=%12.10lf\n", my_rank, MPI_Wtime() - tend);
+		//tend = MPI_Wtime();
+
 		// All get the maximum diff
 		MPI_Allreduce(&maxdiff, &maxdiff_aux, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 		maxdiff = maxdiff_aux;
 
 		// Copy b to a
 		swap_matrix(&a,&b);
+
+		//printf("[%d] Allreduce & swapping matrix=%12.10lf\n", my_rank, MPI_Wtime() - tend);
+		//tend = MPI_Wtime();
 
 		iteration+=1;
 	}
@@ -370,8 +400,8 @@ int main(int argc, char* argv[]) {
 
 	if (my_rank == root_rank){
 		// Output final grid
-		printf("Final grid:\n");
-		print_grid(res, 0, n_dim);
+		//printf("Final grid:\n");
+		//print_grid(res, 0, n_dim);
 
 		// Results
 		printf("Results:\n");
