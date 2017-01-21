@@ -157,7 +157,7 @@ int main(int argc, char* argv[]) {
 	double **res;
 	int root_rank = 0, res_offset;
 
-	double tstart, tend, ttotal;
+	double tstart, tend, computetotal, gathertotal;
 
 	// MPI vars
 	int my_rank;
@@ -207,7 +207,6 @@ int main(int argc, char* argv[]) {
 	printf("[%d] Running simulation with tolerance=%lf and max iterations=%d\n",
 		my_rank, TOL, MAX_ITERATIONS);
 	tstart = MPI_Wtime();
-	tend = MPI_Wtime();
 
 	init_matrix(a, rfrbuff, rfcbuff, rlrbuff, rlcbuff, n_subprobs, subprob_size, column_num, row_num);
 
@@ -371,6 +370,10 @@ int main(int argc, char* argv[]) {
 		iteration+=1;
 	}
 
+	tend = MPI_Wtime();
+	computetotal = tend-tstart;
+	tstart = MPI_Wtime();
+
 	// Gatherv doesn't fit here, as displs param isn't taken as bytes, instead it's multiplied by the size of the recvtype, which is double_strided_vect
 	// Alternative is Send subprob_size*subprob_size contiguous doubles and Recv strided vector
 
@@ -396,7 +399,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	tend = MPI_Wtime();
-	ttotal = tend-tstart;
+	gathertotal = tend-tstart;
 
 	if (my_rank == root_rank){
 		// Output final grid
@@ -409,7 +412,9 @@ int main(int argc, char* argv[]) {
 		printf("Tolerance=%12.10lf\n", maxdiff);
 		printf("Problem dimmensions=%dx%d\n", n_dim, n_dim);
 		printf("Number of subproblems=%d\n", n_subprobs);
-		printf("Running time=%12.10lf\n", ttotal);
+		printf("Compute time=%12.10lf\n", computetotal);
+		printf("Gather time=%12.10lf\n", gathertotal);
+		printf("Total time=%12.10lf\n", gathertotal+computetotal);
 
 		// Free allocated mem
 		free_matrix(res);
