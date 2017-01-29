@@ -422,6 +422,11 @@ int main(int argc, char* argv[]) {
 	free_matrix(a);
 	free_matrix(b);
 
+	free(sfrbuff); free(sfcbuff); free(slrbuff); free(slcbuff);
+	free(rfrbuff); free(rfcbuff); free(rlrbuff); free(rlcbuff);
+	free(sfrreq); free(sfcreq); free(slrreq); free(slcreq);
+	free(rfrreq); free(rfcreq); free(rlrreq); free(rlcreq);
+
 	MPI_Type_free(&double_strided_vect);
 
 	// Finalize MPI lib
