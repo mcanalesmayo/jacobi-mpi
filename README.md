@@ -14,7 +14,7 @@ Run the code by using the script ``comp_run.sh`` with the following parameters (
 
 ## Author
 
-[Marcos Canales Mayo](https://github.com/MarcosCM)
+[Marcos Canales Mayo](https://github.com/mcanalesmayo)
 
 ``jacobi_seq.c`` by **Rubén Gran Tejero** -- rgran@unizar.es
 
