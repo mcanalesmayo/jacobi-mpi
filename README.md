@@ -12,9 +12,7 @@ Run the code by using the script ``comp_run.sh`` with the following parameters (
 3. File containing the C code
 4. Number of OMP threads for every node
 
-## Author
-
-[Marcos Canales Mayo](https://github.com/mcanalesmayo)
+## References
 
 ``jacobi_seq.c`` by **Rubén Gran Tejero** -- rgran@unizar.es
 
