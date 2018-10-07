@@ -17,4 +17,4 @@ Run the code by using the script ``comp_run.sh`` with the following parameters (
 ``jacobi_seq.c`` by **Rubén Gran Tejero** -- rgran@unizar.es
 
 If you use this code for academic work, please also reference:
-* **Ruben Gran Tejero** -- rgran@unizar.es
+* **Rubén Gran Tejero** -- rgran@unizar.es
