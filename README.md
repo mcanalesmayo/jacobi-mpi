@@ -6,6 +6,12 @@ OpenMPI (v1.5) implementation of a simulation of thermal transmission in a 2D sp
 
 OpenMP is also used to provide multithreading.
 
+Run the code by using the script ``comp_run.sh`` with the following parameters (ordered):
+1. Number of MPI nodes
+2. MPI hostfile
+3. File containing the C code
+4. Number of OMP threads for every node
+
 ## Author
 
 [Marcos Canales Mayo](https://github.com/MarcosCM)
