@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
 
 	// Output final grid
 	printf("Final grid:\n");
-	print_grid(a,1,n+1);
+	print_grid(a,0,n+2);
 
 	// Results
 	printf("Results:\n");
