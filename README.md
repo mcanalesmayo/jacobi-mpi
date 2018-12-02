@@ -6,6 +6,8 @@ OpenMPI (v1.5) implementation of a simulation of thermal transmission in a 2D sp
 
 OpenMP is also used to provide multithreading.
 
+A singlethreaded and multithreaded implementation in Go can are available in [this repo](https://github.com/mcanalesmayo/jacobi-go).
+
 Run the code by using the script ``comp_run.sh`` with the following parameters (ordered):
 1. Number of MPI nodes
 2. MPI hostfile
